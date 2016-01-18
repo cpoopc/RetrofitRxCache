@@ -51,7 +51,6 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
         }
         for (Annotation annotation : annotations) {
             if (annotation instanceof UseRxCache) {
-                Class<? extends Annotation> aClass = annotation.annotationType();
                 Type observableType = Utils.getSingleParameterUpperBound((ParameterizedType) returnType);
                 return new SimpleCallAdapter(observableType,annotations,retrofit,cachingSystem);
             }
@@ -106,14 +105,8 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
                 @Override
                 public void call(Subscriber<? super R> subscriber) {
                     // read cache
-                    R serverResult = null;
                     Converter<ResponseBody, R> responseConverter = getResponseConverter(retrofit, responseType, annotations);
-                    serverResult = getFromCache(request, responseConverter, cachingSystem);
-//                    try {
-//                        Thread.sleep(1000);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
+                    R serverResult = getFromCache(request, responseConverter, cachingSystem);
                     if (subscriber.isUnsubscribed()) return;
 
                     if (serverResult != null) {
@@ -147,10 +140,7 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
         }
 
         public static <T> T getFromCache(Request request, Converter<ResponseBody, T> converter, IRxCache cachingSystem) {
-
-//            byte[] fromCache = cachingSystem.getFromCache(request);
             try {
-//                return converter.convert(ResponseBody.create(null, fromCache));
                 return converter.convert(cachingSystem.getFromCache(request));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -163,7 +153,6 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
                 Buffer buffer = new Buffer();
                 RequestBody requestBody = converter.convert(data);
                 requestBody.writeTo(buffer);
-//                cachingSystem.addInCache(request, buffer.readByteArray());
                 cachingSystem.addInCache(request, buffer);
             } catch (IOException e) {
                 e.printStackTrace();

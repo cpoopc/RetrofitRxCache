@@ -46,14 +46,9 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
     @Override
     public void call(Subscriber<? super T> subscriber) {
         if (cacheObservable != null) {
-//            cacheObservable.getObservable().unsafeSubscribe(new CacheNetObserver<T>(cacheObservable, subscriber, storeCacheAction));
-            Subscription cacheSubscription = cacheObservable.getObservable().subscribeOn(Schedulers.io()).unsafeSubscribe(new CacheNetObserver<T>(cacheObservable, subscriber, storeCacheAction));
-//            subscriber.add(cacheSubscription);
+            cacheObservable.getObservable().subscribeOn(Schedulers.io()).unsafeSubscribe(new CacheNetObserver<T>(cacheObservable, subscriber, storeCacheAction));
         }
-//        netObservable.getObservable().unsafeSubscribe(new CacheNetObserver<T>(netObservable, subscriber, storeCacheAction));
-        Subscription netSubscription = netObservable.getObservable().subscribeOn(Schedulers.newThread()).unsafeSubscribe(new CacheNetObserver<T>(netObservable, subscriber, storeCacheAction));
-//        subscriber.add(netSubscription);
-
+        netObservable.getObservable().subscribeOn(Schedulers.newThread()).unsafeSubscribe(new CacheNetObserver<T>(netObservable, subscriber, storeCacheAction));
     }
 
     class ObservableWrapper<T> {
@@ -89,7 +84,6 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
         ObservableWrapper<T> observableWrapper;
         Subscriber<? super T> subscriber;
         Action1<T> storeCacheAction;
-//        T o;
 
         public CacheNetObserver(ObservableWrapper<T> observableWrapper, Subscriber<? super T> subscriber, Action1<T> storeCacheAction) {
             this.observableWrapper = observableWrapper;
@@ -116,9 +110,6 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
                 if(debug) Log.i(TAG,"onCompleted stepIndex:" + observableWrapper.getIndex() + " still not completed");
                 overCount.addAndGet(1);
             }
-//            if (overCount.get() == finalStepIndex) {
-//                subscriber.onCompleted();
-//            }
 
         }
 
