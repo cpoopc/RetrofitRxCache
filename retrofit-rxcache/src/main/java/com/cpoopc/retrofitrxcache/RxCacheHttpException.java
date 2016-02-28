@@ -1,4 +1,6 @@
-package retrofit2;
+package com.cpoopc.retrofitrxcache;
+
+import retrofit2.Response;
 
 /** Exception for an unexpected, non-2xx HTTP response. */
 public final class RxCacheHttpException extends Exception {

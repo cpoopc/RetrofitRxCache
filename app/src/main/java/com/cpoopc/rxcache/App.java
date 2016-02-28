@@ -4,9 +4,9 @@ import android.app.Application;
 
 import com.cpoopc.rxcache.api.GithubService;
 
-import retrofit2.BasicCache;
+import com.cpoopc.retrofitrxcache.BasicCache;
 import retrofit2.Retrofit;
-import retrofit2.RxCacheCallAdapterFactory;
+import com.cpoopc.retrofitrxcache.RxCacheCallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**

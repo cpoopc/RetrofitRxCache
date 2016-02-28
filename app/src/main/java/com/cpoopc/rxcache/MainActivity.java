@@ -8,6 +8,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.cpoopc.retrofitrxcache.RxCacheResult;
 import com.cpoopc.rxcache.model.User;
 
 import butterknife.Bind;
@@ -50,6 +51,7 @@ public class MainActivity extends Activity {
 
             }
         });
+
     }
 
     @Override
@@ -59,11 +61,11 @@ public class MainActivity extends Activity {
     }
 
     public void getUserDetail() {
-        Observable<User> userObservable = App.getInstance().getGithubService().userDetail("cpoopc");
+        Observable<RxCacheResult<User>> userObservable = App.getInstance().getGithubService().userDetail("cpoopc");
         userObservable
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<User>() {
+                .subscribe(new Subscriber<RxCacheResult<User>>() {
                     @Override
                     public void onCompleted() {
                         Log.e("cp:", "onCompleted");
@@ -75,9 +77,9 @@ public class MainActivity extends Activity {
                     }
 
                     @Override
-                    public void onNext(User user) {
-                        Log.e("cp:", "onNext:" + user);
-                        bindUser(user);
+                    public void onNext(RxCacheResult<User> user) {
+                        Log.e("cp:", user.isCache() + " onNext:" + user.getResultModel());
+                        bindUser(user.getResultModel());
                     }
 
                 });

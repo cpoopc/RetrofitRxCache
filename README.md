@@ -1,7 +1,10 @@
 # RetrofitRxCache
 [![](https://jitpack.io/v/cpoopc/RetrofitRxCache.svg)](https://jitpack.io/#cpoopc/RetrofitRxCache)  
 ###update node:  
-2016/2/28: 更新到retrofit2-beta4版本,对应retrofit进行了点改动  
+2016/2/28:  
+1. 更新到retrofit2-beta4版本,对应retrofit进行了点改动  
+2. 由注解方式指定使用cache改为返回类型指定,返回类型为Observable<RxCacheResult<T>>即可启用cache.  
+且可以根据RxCacheResult.isCache()判断是缓存还是网络返回结果.  
 
 trans normal Observable into Observable with cache,support retrofit
 
@@ -14,7 +17,31 @@ retrofit2.0之后,结构更加清晰,定制性更强了.此repo就是基于retro
 2. 若网络获取比Cache获取速度快,Cache不会发射出去.   
 3. 网络获取完毕后,异步进行保存Cache操作,不阻塞结果的发射.   
 
+### 引用方法
+
+此lib加入了JitPack
+引用方法
+根目录下的build.gradle  
+```
+allprojects {
+		repositories {
+			...
+			maven { url "https://jitpack.io" }
+		}
+	}
+```
+项目中  
+```
+
+	dependencies {
+	        compile 'com.github.cpoopc:RetrofitRxCache:v0.0.2'
+	}
+
+
+```
+
 ### Usage
+
 ```
 
 Retrofit retrofit = new Retrofit.Builder()
@@ -25,9 +52,8 @@ Retrofit retrofit = new Retrofit.Builder()
 				
 public interface GithubService {
 
-    @UseRxCache // 标注使用缓存
     @GET("users/{username}")
-    Observable<User> userDetail(@Path("username") String userName);
+    Observable<RxCacheResult<User> userDetail(@Path("username") String userName); // Observable泛型为RxCacheResult<T>,即可使用cache
 
 }
 

@@ -1,10 +1,9 @@
-package retrofit2;
+package com.cpoopc.retrofitrxcache;
 
 import android.content.Context;
 import android.util.Log;
 import android.util.LruCache;
 
-import com.cpoopc.retrofitrxcache.MD5;
 import com.jakewharton.disklrucache.DiskLruCache;
 
 import java.io.File;

@@ -1,9 +1,9 @@
 package com.cpoopc.rxcache.api;
 
 
+import com.cpoopc.retrofitrxcache.RxCacheResult;
 import com.cpoopc.rxcache.model.User;
 
-import retrofit2.UseRxCache;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
 import rx.Observable;
@@ -16,8 +16,7 @@ import rx.Observable;
  */
 public interface GithubService {
 
-    @UseRxCache
     @GET("users/{username}")
-    Observable<User> userDetail(@Path("username") String userName);
+    Observable<RxCacheResult<User>> userDetail(@Path("username") String userName);
 
 }

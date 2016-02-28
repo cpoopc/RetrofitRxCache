@@ -1,18 +1,25 @@
-package retrofit2;
-
-import com.cpoopc.retrofitrxcache.OnSubscribeCacheNet;
+package com.cpoopc.retrofitrxcache;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import okio.Buffer;
+import retrofit2.Call;
+import retrofit2.CallAdapter;
+import retrofit2.Converter;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 import rx.Observable;
 import rx.Subscriber;
 import rx.exceptions.Exceptions;
@@ -49,14 +56,14 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
             throw new IllegalStateException(name + " return type must be parameterized"
                     + " as " + name + "<Foo> or " + name + "<? extends Foo>");
         }
-        for (Annotation annotation : annotations) {
-            if (annotation instanceof UseRxCache) {
-//                Type observableType = Utils.getSingleParameterUpperBound((ParameterizedType) returnType);
-                Type observableType = getParameterUpperBound(0, (ParameterizedType) returnType);
-                // TODO: 2016/2/28 添加Response类支持
-                return new RxCacheCallAdapter(observableType,annotations,retrofit,cachingSystem);
-            }
 
+        Type observableType = getParameterUpperBound(0, (ParameterizedType) returnType);
+        Class<?> genRawType = getRawType(observableType);
+        if (genRawType == RxCacheResult.class) {
+            Type actualType = ((ParameterizedType) observableType).getActualTypeArguments()[0];
+            android.util.Log.d("cp:RxCache", "RxCacheResult<T>  T:" + actualType);
+            // TODO: 2016/2/28 添加Response类支持
+            return new RxCacheCallAdapter(actualType, annotations, retrofit, cachingSystem);
         }
         return null;
     }
@@ -64,7 +71,7 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
     /**
      * 将Call转换成带有缓存功能的Observable<T>
      */
-    static final class RxCacheCallAdapter implements CallAdapter<Observable<?>> {
+    static final class RxCacheCallAdapter implements CallAdapter<Observable> {
         private final Type responseType;
         private final Annotation[] annotations;
         private final Retrofit retrofit;
@@ -104,44 +111,45 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
             return responseType;
         }
 
-        @Override public <R> Observable<R> adapt(Call<R> call) {
+        @Override public <R> Observable<RxCacheResult<R>> adapt(Call<R> call) {
             final Request request = buildRequestFromCall(call);
-            Observable<R> mCacheResultObservable = Observable.create(new Observable.OnSubscribe<R>() {
+            Observable<RxCacheResult<R>> mCacheResultObservable = Observable.create(new Observable.OnSubscribe<RxCacheResult<R>>() {
                 @Override
-                public void call(Subscriber<? super R> subscriber) {
+                public void call(Subscriber<? super RxCacheResult<R>> subscriber) {
                     // read cache
                     Converter<ResponseBody, R> responseConverter = getResponseConverter(retrofit, responseType, annotations);
                     R serverResult = getFromCache(request, responseConverter, cachingSystem);
                     if (subscriber.isUnsubscribed()) return;
 
                     if (serverResult != null) {
-                        subscriber.onNext(serverResult);
+                        subscriber.onNext(new RxCacheResult<R>(true, serverResult));
                     }
                     subscriber.onCompleted();
                 }
             });
-            Action1<R> mCacheAction = new Action1<R>() {
+            Action1<RxCacheResult<R>> mCacheAction = new Action1<RxCacheResult<R>>() {
                 @Override
-                public void call(R serverResult) {
+                public void call(RxCacheResult<R> serverResult) {
                     // store cache action
                     if (serverResult != null) {
+                        R resultModel = serverResult.getResultModel();
                         Converter<R, RequestBody> requestConverter = getRequestConverter(retrofit, responseType, annotations);
-                        addToCache(request, serverResult, requestConverter, cachingSystem);
+                        addToCache(request, resultModel, requestConverter, cachingSystem);
                     }
                 }
             };
 
-            Observable<R> serverObservable = Observable.create(new CallOnSubscribe<>(call)) //
-                    .flatMap(new Func1<Response<R>, Observable<R>>() {
+            Observable<RxCacheResult<R>> serverObservable = Observable.create(new CallOnSubscribe<>(call)) //
+                    .flatMap(new Func1<Response<R>, Observable<RxCacheResult<R>>>() {
                         @Override
-                        public Observable<R> call(Response<R> response) {
+                        public Observable<RxCacheResult<R>> call(Response<R> response) {
                             if (response.isSuccess()) {
-                                return Observable.just(response.body());
+                                return Observable.just(new RxCacheResult<R>(false, response.body()));
                             }
                             return Observable.error(new RxCacheHttpException(response));
                         }
                     });
-            return Observable.create(new OnSubscribeCacheNet<R>(mCacheResultObservable, serverObservable, mCacheAction));
+            return Observable.create(new OnSubscribeCacheNet<RxCacheResult<R>>(mCacheResultObservable, serverObservable, mCacheAction));
         }
 
         public static <T> T getFromCache(Request request, Converter<ResponseBody, T> converter, IRxCache cachingSystem) {
@@ -218,4 +226,39 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
         // 此处获取RequestBodyConverter,是为了将model转成Buffer,以便写入cache
         return retrofit.requestBodyConverter(dataType, new Annotation[0], annotations);
     }
+
+    // This method is copyright 2008 Google Inc. and is taken from Gson under the Apache 2.0 license.
+    public static Class<?> getRawType(Type type) {
+        if (type instanceof Class<?>) {
+            // Type is a normal class.
+            return (Class<?>) type;
+
+        } else if (type instanceof ParameterizedType) {
+            ParameterizedType parameterizedType = (ParameterizedType) type;
+
+            // I'm not exactly sure why getRawType() returns Type instead of Class. Neal isn't either but
+            // suspects some pathological case related to nested classes exists.
+            Type rawType = parameterizedType.getRawType();
+            if (!(rawType instanceof Class)) throw new IllegalArgumentException();
+            return (Class<?>) rawType;
+
+        } else if (type instanceof GenericArrayType) {
+            Type componentType = ((GenericArrayType) type).getGenericComponentType();
+            return Array.newInstance(getRawType(componentType), 0).getClass();
+
+        } else if (type instanceof TypeVariable) {
+            // We could use the variable's bounds, but that won't work if there are multiple. Having a raw
+            // type that's more general than necessary is okay.
+            return Object.class;
+
+        } else if (type instanceof WildcardType) {
+            return getRawType(((WildcardType) type).getUpperBounds()[0]);
+
+        } else {
+            String className = type == null ? "null" : type.getClass().getName();
+            throw new IllegalArgumentException("Expected a Class, ParameterizedType, or "
+                    + "GenericArrayType, but <" + type + "> is of type " + className);
+        }
+    }
+
 }
