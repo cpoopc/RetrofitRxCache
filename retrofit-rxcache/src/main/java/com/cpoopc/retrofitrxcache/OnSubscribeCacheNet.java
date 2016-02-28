@@ -33,6 +33,7 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
     private int stepIndex;
     private final int finalStepIndex;
     private AtomicInteger overCount = new AtomicInteger(0);
+    private boolean sync = true;// true 同步,false:异步
 
     public OnSubscribeCacheNet(Observable<T> cacheObservable, Observable<T> netObservable, Action1<T> storeCacheAction) {
         if (cacheObservable != null) {
@@ -46,9 +47,17 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
     @Override
     public void call(Subscriber<? super T> subscriber) {
         if (cacheObservable != null) {
-            cacheObservable.getObservable().subscribeOn(Schedulers.io()).unsafeSubscribe(new CacheNetObserver<T>(cacheObservable, subscriber, storeCacheAction));
+            if (sync) {
+                cacheObservable.getObservable().unsafeSubscribe(new CacheNetObserver<T>(cacheObservable, subscriber, storeCacheAction));
+            } else {
+                cacheObservable.getObservable().subscribeOn(Schedulers.io()).unsafeSubscribe(new CacheNetObserver<T>(cacheObservable, subscriber, storeCacheAction));
+            }
         }
-        netObservable.getObservable().subscribeOn(Schedulers.newThread()).unsafeSubscribe(new CacheNetObserver<T>(netObservable, subscriber, storeCacheAction));
+        if (sync) {
+            netObservable.getObservable().unsafeSubscribe(new CacheNetObserver<T>(netObservable, subscriber, storeCacheAction));
+        } else {
+            netObservable.getObservable().subscribeOn(Schedulers.newThread()).unsafeSubscribe(new CacheNetObserver<T>(netObservable, subscriber, storeCacheAction));
+        }
     }
 
     class ObservableWrapper<T> {
@@ -126,10 +135,12 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
                         e1.printStackTrace();
                     }
                 }
-                try {// FIXME: 2016/1/18 issue A 临时解决办法
-                    Thread.sleep(500);
-                } catch (InterruptedException e1) {
-                    e1.printStackTrace();
+                if (!sync) {
+                    try {// FIXME: 2016/1/18 issue A 临时解决办法
+                        Thread.sleep(500);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
                 }
                 if (subscriber != null && !subscriber.isUnsubscribed()) {
                     subscriber.onError(e);
@@ -147,7 +158,7 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
                 logThread("");
                 if(debug) Log.e(TAG, " check subscriber :" + subscriber + " isUnsubscribed:" + subscriber.isUnsubscribed());
                 if (subscriber != null && !subscriber.isUnsubscribed()) {
-                    subscriber.onNext(o);// issue A:外面如果ObservableOn 其他线程,将会是异步操作,如果在实际的onNext调用之前,发生了onComplete或者onError,将会unsubscribe,导致onNext没有被调用
+                    subscriber.onNext(o);// FIXME: issue A:外面如果ObservableOn 其他线程,将会是异步操作,如果在实际的onNext调用之前,发生了onComplete或者onError,将会unsubscribe,导致onNext没有被调用
                 }
             }
         }
