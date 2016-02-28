@@ -1,4 +1,5 @@
 # RetrofitRxCache
+[![](https://jitpack.io/v/cpoopc/RetrofitRxCache.svg)](https://jitpack.io/#cpoopc/RetrofitRxCache)  
 trans normal Observable into Observable with cache,support retrofit
 
 retrofit是个网络请求利器,帮助我们快速编写http请求.而且retrofit支持 RxJava,配合Rxjava实在十分强大.
