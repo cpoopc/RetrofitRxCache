@@ -1,5 +1,8 @@
 # RetrofitRxCache
 [![](https://jitpack.io/v/cpoopc/RetrofitRxCache.svg)](https://jitpack.io/#cpoopc/RetrofitRxCache)  
+###update node:  
+2016/2/28: 更新到retrofit2-beta4版本,对应retrofit进行了点改动  
+
 trans normal Observable into Observable with cache,support retrofit
 
 retrofit是个网络请求利器,帮助我们快速编写http请求.而且retrofit支持 RxJava,配合Rxjava实在十分强大.
@@ -10,3 +13,22 @@ retrofit2.0之后,结构更加清晰,定制性更强了.此repo就是基于retro
 1. Cache获取与网络获取是异步进行的.   
 2. 若网络获取比Cache获取速度快,Cache不会发射出去.   
 3. 网络获取完毕后,异步进行保存Cache操作,不阻塞结果的发射.   
+
+### Usage
+```
+
+Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://api.github.com")
+                .addCallAdapterFactory(RxCacheCallAdapterFactory.create(BasicCache.fromCtx(this))) // 添加到retrofit的CallAdapterFactory里去
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+				
+public interface GithubService {
+
+    @UseRxCache // 标注使用缓存
+    @GET("users/{username}")
+    Observable<User> userDetail(@Path("username") String userName);
+
+}
+
+```

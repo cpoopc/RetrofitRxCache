@@ -3,9 +3,9 @@ package com.cpoopc.rxcache.api;
 
 import com.cpoopc.rxcache.model.User;
 
-import retrofit.UseRxCache;
-import retrofit.http.GET;
-import retrofit.http.Path;
+import retrofit2.UseRxCache;
+import retrofit2.http.GET;
+import retrofit2.http.Path;
 import rx.Observable;
 
 /**

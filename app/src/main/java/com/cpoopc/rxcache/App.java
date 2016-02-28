@@ -4,10 +4,10 @@ import android.app.Application;
 
 import com.cpoopc.rxcache.api.GithubService;
 
-import retrofit.BasicCache;
-import retrofit.GsonConverterFactory;
-import retrofit.Retrofit;
-import retrofit.RxCacheCallAdapterFactory;
+import retrofit2.BasicCache;
+import retrofit2.Retrofit;
+import retrofit2.RxCacheCallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * User: cpoopc

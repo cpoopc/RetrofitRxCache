@@ -11,6 +11,7 @@ import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 /**
+ * 缓存+网络请求
  * User: cpoopc
  * Date: 2016-01-18
  * Time: 10:19

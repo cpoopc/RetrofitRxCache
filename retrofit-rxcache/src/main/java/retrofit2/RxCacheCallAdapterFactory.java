@@ -1,9 +1,6 @@
-package retrofit;
+package retrofit2;
 
 import com.cpoopc.retrofitrxcache.OnSubscribeCacheNet;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
-import com.squareup.okhttp.ResponseBody;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -12,6 +9,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
 import okio.Buffer;
 import rx.Observable;
 import rx.Subscriber;
@@ -27,7 +27,7 @@ import rx.subscriptions.Subscriptions;
  * @time 20:33
  * @description
  */
-public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
+public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
     private final IRxCache cachingSystem;
 
     public RxCacheCallAdapterFactory(IRxCache cachingSystem) {
@@ -40,7 +40,7 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
 
     @Override
     public CallAdapter<?> get(Type returnType, Annotation[] annotations, Retrofit retrofit) {
-        Class<?> rawType = Utils.getRawType(returnType);
+        Class<?> rawType = getRawType(returnType);
         if (rawType != Observable.class) {
             return null;
         }
@@ -51,22 +51,27 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
         }
         for (Annotation annotation : annotations) {
             if (annotation instanceof UseRxCache) {
-                Type observableType = Utils.getSingleParameterUpperBound((ParameterizedType) returnType);
-                return new SimpleCallAdapter(observableType,annotations,retrofit,cachingSystem);
+//                Type observableType = Utils.getSingleParameterUpperBound((ParameterizedType) returnType);
+                Type observableType = getParameterUpperBound(0, (ParameterizedType) returnType);
+                // TODO: 2016/2/28 添加Response类支持
+                return new RxCacheCallAdapter(observableType,annotations,retrofit,cachingSystem);
             }
 
         }
         return null;
     }
 
-    static final class SimpleCallAdapter implements CallAdapter<Observable<?>> {
+    /**
+     * 将Call转换成带有缓存功能的Observable<T>
+     */
+    static final class RxCacheCallAdapter implements CallAdapter<Observable<?>> {
         private final Type responseType;
         private final Annotation[] annotations;
         private final Retrofit retrofit;
         private final IRxCache cachingSystem;
 
-        public SimpleCallAdapter(Type responseType, Annotation[] annotations, Retrofit retrofit,
-                                 IRxCache cachingSystem) {
+        public RxCacheCallAdapter(Type responseType, Annotation[] annotations, Retrofit retrofit,
+                                  IRxCache cachingSystem) {
             this.responseType = responseType;
             this.annotations = annotations;
             this.retrofit = retrofit;
@@ -120,7 +125,7 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
                 public void call(R serverResult) {
                     // store cache action
                     if (serverResult != null) {
-                        Converter<Object, RequestBody> requestConverter = getRequestConverter(retrofit, responseType, annotations);
+                        Converter<R, RequestBody> requestConverter = getRequestConverter(retrofit, responseType, annotations);
                         addToCache(request, serverResult, requestConverter, cachingSystem);
                     }
                 }
@@ -204,29 +209,13 @@ public class RxCacheCallAdapterFactory implements CallAdapter.Factory {
 
     @SuppressWarnings("unchecked")
     public static <T> Converter<ResponseBody, T> getResponseConverter(Retrofit retrofit, Type dataType, Annotation[] annotations) {
-        for(Converter.Factory factory : retrofit.converterFactories()) {
-            if (factory == null) continue;
-            Converter<ResponseBody, T> converter =
-                    (Converter<ResponseBody, T>) factory.fromResponseBody(dataType, annotations);
-
-            if (converter != null) {
-                return converter;
-            }
-        }
-        return null;
+        return retrofit.responseBodyConverter(dataType, annotations);
     }
 
     @SuppressWarnings("unchecked")
     public static <T> Converter<T, RequestBody> getRequestConverter(Retrofit retrofit, Type dataType, Annotation[] annotations) {
-        for(Converter.Factory factory : retrofit.converterFactories()){
-            if(factory == null) continue;
-            Converter<T, RequestBody> converter =
-                    (Converter<T, RequestBody>) factory.toRequestBody(dataType, annotations);
-
-            if (converter != null) {
-                return converter;
-            }
-        }
-        return null;
+        // TODO gson beta4版本中paramsAnnotations与获取converter没有什么关系
+        // 此处获取RequestBodyConverter,是为了将model转成Buffer,以便写入cache
+        return retrofit.requestBodyConverter(dataType, new Annotation[0], annotations);
     }
 }

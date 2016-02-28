@@ -22,8 +22,8 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.jakewharton:disklrucache:2.0.2'
-    compile 'com.squareup.retrofit:retrofit:2.0.0-beta2'
-    compile 'io.reactivex:rxandroid:1.0.1'
+    provided 'com.squareup.retrofit2:retrofit:2.0.0-beta4'
+    provided 'io.reactivex:rxandroid:1.0.1'
 }
 
 

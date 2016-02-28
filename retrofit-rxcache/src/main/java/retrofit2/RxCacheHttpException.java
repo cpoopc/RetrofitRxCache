@@ -1,4 +1,4 @@
-package retrofit;
+package retrofit2;
 
 /** Exception for an unexpected, non-2xx HTTP response. */
 public final class RxCacheHttpException extends Exception {

@@ -1,4 +1,4 @@
-package retrofit;
+package retrofit2;
 
 import android.content.Context;
 import android.util.Log;
@@ -6,14 +6,14 @@ import android.util.LruCache;
 
 import com.cpoopc.retrofitrxcache.MD5;
 import com.jakewharton.disklrucache.DiskLruCache;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.ResponseBody;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.charset.Charset;
 
+import okhttp3.HttpUrl;
+import okhttp3.Request;
+import okhttp3.ResponseBody;
 import okio.Buffer;
 
 /**
@@ -51,7 +51,7 @@ public class BasicCache implements IRxCache {
                 REASONABLE_MEM_ENTRIES);
     }
 
-    private String urlToKey(URL url) {
+    private String urlToKey(HttpUrl url) {
         return MD5.getMD5(url.toString());
     }
 

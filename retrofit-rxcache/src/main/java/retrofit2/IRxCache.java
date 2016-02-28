@@ -1,8 +1,8 @@
-package retrofit;
+package retrofit2;
 
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.ResponseBody;
 
+import okhttp3.Request;
+import okhttp3.ResponseBody;
 import okio.Buffer;
 
 /**
