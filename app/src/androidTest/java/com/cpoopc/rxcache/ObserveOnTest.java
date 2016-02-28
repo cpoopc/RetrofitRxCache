@@ -2,6 +2,8 @@ package com.cpoopc.rxcache;
 
 import android.test.AndroidTestCase;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.security.auth.Subject;
@@ -26,13 +28,26 @@ public class ObserveOnTest extends AndroidTestCase{
             super(detailMessage);
         }
     }
-    public void testObserveOnAndroidMainThread() {
-        final PublishSubject<Integer> subject = PublishSubject.create();
+
+    public void testObserveOnAndroidMainThread() throws InterruptedException {
+        final CountDownLatch completedLatch = new CountDownLatch(1);
         final AtomicInteger atomicInteger = new AtomicInteger(0);
         final int count = 20;
-        subject
+        Observable.create(new Observable.OnSubscribe<Integer>() {
+            @Override
+            public void call(Subscriber<? super Integer> subscriber) {
+                subscriber.onNext(count);
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//
+//                subscriber.onError(new MokeException("moke exception"));
+            }
+        })
                 .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.newThread())
                 .subscribe(new Subscriber<Integer>() {
                     @Override
                     public void onCompleted() {
@@ -41,32 +56,20 @@ public class ObserveOnTest extends AndroidTestCase{
 
                     @Override
                     public void onError(Throwable e) {
+                        System.out.println("onError:" + atomicInteger.get());
                         android.util.Log.e("cc:", "onError:" + atomicInteger.get());
                         assertEquals(atomicInteger.get(), count);
+                        completedLatch.countDown();
                     }
 
                     @Override
                     public void onNext(Integer o) {
                         android.util.Log.e("cc:", "onNext:" + o);
+                        System.out.println("onNext:" + o);
                         atomicInteger.getAndSet(o);
+                        completedLatch.countDown();
                     }
                 });
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < count; i++) {
-                    subject.onNext(i);
-                }
-//                try {
-//                    Thread.sleep(1000);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-                subject.onError(new MokeException("moke exception"));
-            }
-        }).start();
-        while (true) {
-
-        }
+        completedLatch.await();
     }
 }
