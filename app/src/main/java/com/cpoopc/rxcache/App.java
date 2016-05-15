@@ -31,7 +31,8 @@ public class App extends Application {
         instance = this;
         mRetrofit = new Retrofit.Builder()
                 .baseUrl("https://api.github.com")
-                .addCallAdapterFactory(RxCacheCallAdapterFactory.create(BasicCache.fromCtx(this)))
+                .addCallAdapterFactory(RxCacheCallAdapterFactory.create(BasicCache.fromCtx(this), false))// 分开读取缓存,网络
+//                .addCallAdapterFactory(RxCacheCallAdapterFactory.create(BasicCache.fromCtx(this), true))// 先读取缓存,再获取网络
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
     }

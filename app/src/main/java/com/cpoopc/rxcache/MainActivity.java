@@ -16,6 +16,7 @@ import butterknife.ButterKnife;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 public class MainActivity extends Activity {
@@ -63,7 +64,7 @@ public class MainActivity extends Activity {
     public void getUserDetail() {
         Observable<RxCacheResult<User>> userObservable = App.getInstance().getGithubService().userDetail("cpoopc");
         userObservable
-                .subscribeOn(Schedulers.newThread())
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Subscriber<RxCacheResult<User>>() {
                     @Override

@@ -36,13 +36,24 @@ import rx.subscriptions.Subscriptions;
  */
 public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
     private final IRxCache cachingSystem;
+    private final CacheNetOnSubscribeFactory cacheNetOnSubscribeFactory;
 
     public RxCacheCallAdapterFactory(IRxCache cachingSystem) {
         this.cachingSystem = cachingSystem;
+        this.cacheNetOnSubscribeFactory = new CacheNetOnSubscribeFactory();
+    }
+
+    public RxCacheCallAdapterFactory(IRxCache cachingSystem, boolean sync) {
+        this.cachingSystem = cachingSystem;
+        this.cacheNetOnSubscribeFactory = new CacheNetOnSubscribeFactory(sync);
     }
 
     public static RxCacheCallAdapterFactory create(IRxCache cachingSystem) {
         return new RxCacheCallAdapterFactory(cachingSystem);
+    }
+
+    public static RxCacheCallAdapterFactory create(IRxCache cachingSystem, boolean sync) {
+        return new RxCacheCallAdapterFactory(cachingSystem, sync);
     }
 
     @Override
@@ -68,10 +79,30 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
         return null;
     }
 
+    public static <T> T getFromCache(Request request, Converter<ResponseBody, T> converter, IRxCache cachingSystem) {
+        try {
+            return converter.convert(cachingSystem.getFromCache(request));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static <T> void addToCache(Request request, T data, Converter<T, RequestBody> converter, IRxCache cachingSystem) {
+        try {
+            Buffer buffer = new Buffer();
+            RequestBody requestBody = converter.convert(data);
+            requestBody.writeTo(buffer);
+            cachingSystem.addInCache(request, buffer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * 将Call转换成带有缓存功能的Observable<T>
      */
-    static final class RxCacheCallAdapter implements CallAdapter<Observable> {
+    final class RxCacheCallAdapter implements CallAdapter<Observable> {
         private final Type responseType;
         private final Annotation[] annotations;
         private final Retrofit retrofit;
@@ -90,7 +121,7 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
          * Inspects an OkHttp-powered Call<T> and builds a Request
          * * @return A valid Request (that contains query parameters, right method and endpoint)
          */
-        private Request buildRequestFromCall(Call call){
+        private Request buildRequestFromCall(Call call) {
             try {
                 Field argsField = call.getClass().getDeclaredField("args");
                 argsField.setAccessible(true);
@@ -102,92 +133,75 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
                 Method createMethod = requestFactory.getClass().getDeclaredMethod("create", Object[].class);
                 createMethod.setAccessible(true);
                 return (Request) createMethod.invoke(requestFactory, new Object[]{args});
-            }catch(Exception exc){
+            } catch (Exception exc) {
                 return null;
             }
         }
 
-        @Override public Type responseType() {
+        @Override
+        public Type responseType() {
             return responseType;
         }
 
-        @Override public <R> Observable<RxCacheResult<R>> adapt(Call<R> call) {
+        @Override
+        public <RESULT> Observable<RxCacheResult<RESULT>> adapt(Call<RESULT> call) {
             final Request request = buildRequestFromCall(call);
-            Observable<RxCacheResult<R>> mCacheResultObservable = Observable.create(new Observable.OnSubscribe<RxCacheResult<R>>() {
+            Observable<RxCacheResult<RESULT>> mCacheResultObservable = Observable.create(new Observable.OnSubscribe<RxCacheResult<RESULT>>() {
                 @Override
-                public void call(Subscriber<? super RxCacheResult<R>> subscriber) {
+                public void call(Subscriber<? super RxCacheResult<RESULT>> subscriber) {
                     // read cache
-                    Converter<ResponseBody, R> responseConverter = getResponseConverter(retrofit, responseType, annotations);
-                    R serverResult = getFromCache(request, responseConverter, cachingSystem);
+                    Converter<ResponseBody, RESULT> responseConverter = getResponseConverter(retrofit, responseType, annotations);
+                    RESULT serverResult = getFromCache(request, responseConverter, cachingSystem);
                     if (subscriber.isUnsubscribed()) return;
-
                     if (serverResult != null) {
-                        subscriber.onNext(new RxCacheResult<R>(true, serverResult));
+                        subscriber.onNext(new RxCacheResult<RESULT>(true, serverResult));
                     }
                     subscriber.onCompleted();
                 }
             });
-            Action1<RxCacheResult<R>> mCacheAction = new Action1<RxCacheResult<R>>() {
+            Action1<RxCacheResult<RESULT>> mCacheAction = new Action1<RxCacheResult<RESULT>>() {
                 @Override
-                public void call(RxCacheResult<R> serverResult) {
+                public void call(RxCacheResult<RESULT> serverResult) {
                     // store cache action
                     if (serverResult != null) {
-                        R resultModel = serverResult.getResultModel();
-                        Converter<R, RequestBody> requestConverter = getRequestConverter(retrofit, responseType, annotations);
+                        RESULT resultModel = serverResult.getResultModel();
+                        Converter<RESULT, RequestBody> requestConverter = getRequestConverter(retrofit, responseType, annotations);
                         addToCache(request, resultModel, requestConverter, cachingSystem);
                     }
                 }
             };
 
-            Observable<RxCacheResult<R>> serverObservable = Observable.create(new CallOnSubscribe<>(call)) //
-                    .flatMap(new Func1<Response<R>, Observable<RxCacheResult<R>>>() {
+            Observable<RxCacheResult<RESULT>> serverObservable = Observable.create(new CallOnSubscribe<>(call)) //
+                    .flatMap(new Func1<Response<RESULT>, Observable<RxCacheResult<RESULT>>>() {
                         @Override
-                        public Observable<RxCacheResult<R>> call(Response<R> response) {
+                        public Observable<RxCacheResult<RESULT>> call(Response<RESULT> response) {
                             if (response.isSuccess()) {
-                                return Observable.just(new RxCacheResult<R>(false, response.body()));
+                                return Observable.just(new RxCacheResult<RESULT>(false, response.body()));
                             }
                             return Observable.error(new RxCacheHttpException(response));
                         }
                     });
-            return Observable.create(new OnSubscribeCacheNet<RxCacheResult<R>>(mCacheResultObservable, serverObservable, mCacheAction));
-        }
-
-        public static <T> T getFromCache(Request request, Converter<ResponseBody, T> converter, IRxCache cachingSystem) {
-            try {
-                return converter.convert(cachingSystem.getFromCache(request));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        public static <T> void addToCache(Request request, T data, Converter<T, RequestBody> converter, IRxCache cachingSystem) {
-            try {
-                Buffer buffer = new Buffer();
-                RequestBody requestBody = converter.convert(data);
-                requestBody.writeTo(buffer);
-                cachingSystem.addInCache(request, buffer);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            return Observable.create(cacheNetOnSubscribeFactory.create(mCacheResultObservable, serverObservable, mCacheAction));
         }
 
     }
 
-    static final class CallOnSubscribe<T> implements Observable.OnSubscribe<Response<T>> {
+    final class CallOnSubscribe<T> implements Observable.OnSubscribe<Response<T>> {
         private final Call<T> originalCall;
 
         private CallOnSubscribe(Call<T> originalCall) {
             this.originalCall = originalCall;
         }
 
-        @Override public void call(final Subscriber<? super Response<T>> subscriber) {
+        @Override
+        public void call(final Subscriber<? super Response<T>> subscriber) {
             // Since Call is a one-shot type, clone it for each new subscriber.
             final Call<T> call = originalCall.clone();
 
             // Attempt to cancel the call if it is still in-flight on unsubscription.
             subscriber.add(Subscriptions.create(new Action0() {
-                @Override public void call() {
+                @Override
+                public void call() {
                     call.cancel();
                 }
             }));

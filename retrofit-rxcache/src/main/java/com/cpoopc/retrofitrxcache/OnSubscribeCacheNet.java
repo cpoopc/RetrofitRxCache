@@ -1,6 +1,7 @@
 package com.cpoopc.retrofitrxcache;
 
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import android.util.Log;
@@ -35,6 +36,7 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
     private final int finalStepIndex;
     private AtomicInteger overCount = new AtomicInteger(0);
     private boolean sync = true;// true 同步,false:异步
+    private CountDownLatch cacheLatch = new CountDownLatch(1);
 
     public OnSubscribeCacheNet(Observable<T> cacheObservable, Observable<T> netObservable, Action1<T> storeCacheAction) {
         if (cacheObservable != null) {
@@ -137,11 +139,16 @@ public class OnSubscribeCacheNet<T> implements Observable.OnSubscribe<T> {
                     }
                 }
                 if (!sync) {
-                    try {// FIXME: 2016/1/18 issue A 临时解决办法
-                        Thread.sleep(500);
+                    try {
+                        cacheLatch.await();
                     } catch (InterruptedException e1) {
                         e1.printStackTrace();
                     }
+//                    try {// FIXME: 2016/1/18 issue A 临时解决办法
+//                        Thread.sleep(500);
+//                    } catch (InterruptedException e1) {
+//                        e1.printStackTrace();
+//                    }
                 }
                 if (subscriber != null && !subscriber.isUnsubscribed()) {
                     subscriber.onError(e);

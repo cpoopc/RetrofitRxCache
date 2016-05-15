@@ -1,9 +1,11 @@
 # RetrofitRxCache
 [![](https://jitpack.io/v/cpoopc/RetrofitRxCache.svg)](https://jitpack.io/#cpoopc/RetrofitRxCache)  
 ###update node:  
+2016/5/15:  
+RxCacheCallAdapterFactory create(IRxCache cachingSystem, boolean sync),sync指定同步获取缓存,网络还是异步获取
 2016/2/28:  
 1. 更新到retrofit2-beta4版本,对应retrofit进行了点改动  
-2. 由注解方式指定使用cache改为返回类型指定,返回类型为Observable<RxCacheResult<T>>即可启用cache.  
+2. 由注解方式(@UseRxCache)指定使用cache改为返回类型指定,返回类型为Observable<RxCacheResult<T>>即可启用cache.  
 且可以根据RxCacheResult.isCache()判断是缓存还是网络返回结果.  
 
 trans normal Observable into Observable with cache,support retrofit
