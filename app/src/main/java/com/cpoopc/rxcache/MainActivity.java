@@ -65,7 +65,9 @@ public class MainActivity extends Activity {
         Observable<RxCacheResult<User>> userObservable = App.getInstance().getGithubService().userDetail("cpoopc");
         userObservable
                 .subscribeOn(Schedulers.io())
+                .materialize()
                 .observeOn(AndroidSchedulers.mainThread())
+                .<RxCacheResult<User>>dematerialize()
                 .subscribe(new Subscriber<RxCacheResult<User>>() {
                     @Override
                     public void onCompleted() {
