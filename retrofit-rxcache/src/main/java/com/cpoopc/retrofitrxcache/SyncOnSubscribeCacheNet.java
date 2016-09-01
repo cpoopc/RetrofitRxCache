@@ -5,10 +5,9 @@ import rx.Subscriber;
 import rx.functions.Action1;
 
 /**
- * @author cpoopc
- * @date 2016/05/15
- * @time 12:58
- * @description
+ * User: cpoopc
+ * Date: 2016/05/15
+ * Time: 12:58
  */
 public class SyncOnSubscribeCacheNet<T> extends AsyncOnSubscribeCacheNet<T> {
     public SyncOnSubscribeCacheNet(Observable<T> cacheObservable, Observable<T> netObservable, Action1<T> storeCacheAction) {

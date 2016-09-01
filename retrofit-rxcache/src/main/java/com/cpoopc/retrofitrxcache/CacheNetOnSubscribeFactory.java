@@ -4,10 +4,10 @@ import rx.Observable;
 import rx.functions.Action1;
 
 /**
- * @author cpoopc
- * @date 2016/05/15
- * @time 11:36
- * @description
+ * User: cpoopc
+ * Date: 2016-05-15
+ * Time: 11:36
+ * Ver.: 0.1
  */
 public class CacheNetOnSubscribeFactory {
 

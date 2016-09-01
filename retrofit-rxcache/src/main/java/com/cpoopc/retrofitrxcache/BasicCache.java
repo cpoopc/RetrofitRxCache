@@ -16,7 +16,7 @@ import okhttp3.ResponseBody;
 import okio.Buffer;
 
 /**
- * A basic caching system that stores responses in RAM & disk
+ * A basic caching system that stores responses in RAM and disk
  * It uses {@link DiskLruCache} and {@link LruCache} to do the former.
  */
 public class BasicCache implements IRxCache {
@@ -40,8 +40,8 @@ public class BasicCache implements IRxCache {
     /***
      * Constructs a BasicCaching system using settings that should work for everyone
      *
-     * @param context
-     * @return
+     * @param context    上下文
+     * @return  BasicCache
      */
     public static BasicCache fromCtx(Context context) {
         return new BasicCache(
@@ -69,6 +69,10 @@ public class BasicCache implements IRxCache {
         }
     }
 
+    /**
+     * @param request
+     * @return
+     */
     @Override
     public ResponseBody getFromCache(Request request) {
         String cacheKey = urlToKey(request.url());

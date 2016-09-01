@@ -1,10 +1,9 @@
 package com.cpoopc.retrofitrxcache;
 
 /**
- * @author cpoopc
- * @date 2016/2/28
- * @time 21:14
- * @description
+ * User: cpoopc
+ * Date: 2016/2/28
+ * Time: 21:14
  */
 public class RxCacheResult<T> {
     private boolean isCache;

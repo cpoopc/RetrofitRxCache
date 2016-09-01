@@ -30,10 +30,9 @@ import rx.functions.Func1;
 import rx.subscriptions.Subscriptions;
 
 /**
- * @author cpoopc
- * @date 2016/1/16
- * @time 20:33
- * @description
+ * User: cpoopc
+ * Date: 2016/1/16
+ * Time: 20:33
  */
 public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
     private final IRxCache cachingSystem;
