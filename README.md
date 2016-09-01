@@ -38,7 +38,7 @@ allprojects {
 ```
 
 	dependencies {
-	        compile 'com.github.cpoopc:RetrofitRxCache:v1.0.2'
+	        compile 'com.github.cpoopc:RetrofitRxCache:v1.0.5'
 	}
 
 

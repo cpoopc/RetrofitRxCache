@@ -30,7 +30,7 @@ dependencies {
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 // library版本
-version = "1.0.2"
+version = "v1.0.5"
 
 def siteUrl = 'https://github.com/cpoopc/RetrofitRxCache'      // 项目的主页
 def gitUrl = 'https://github.com/cpoopc/RetrofitRxCache.git'   // Git仓库的url
