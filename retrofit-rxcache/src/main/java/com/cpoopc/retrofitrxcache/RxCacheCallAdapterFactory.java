@@ -5,6 +5,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -122,20 +123,28 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
          * * @return A valid Request (that contains query parameters, right method and endpoint)
          */
         private Request buildRequestFromCall(Call call) {
+            Request request = null;
             try {
-                Field argsField = call.getClass().getDeclaredField("args");
-                argsField.setAccessible(true);
-                Object[] args = (Object[]) argsField.get(call);
+                // 增加了call.request()方法:https://github.com/square/retrofit/commit/b3ea768567e9e1fb1ba987bea021dbc0ead4acd4
+                request = call.request();
+            }catch (NoSuchMethodError e) {
+                try {
+                    // 旧版本需要通过反射获取Request
+                    Field argsField = call.getClass().getDeclaredField("args");
+                    argsField.setAccessible(true);
+                    Object[] args = (Object[]) argsField.get(call);
 
-                Field requestFactoryField = call.getClass().getDeclaredField("requestFactory");
-                requestFactoryField.setAccessible(true);
-                Object requestFactory = requestFactoryField.get(call);
-                Method createMethod = requestFactory.getClass().getDeclaredMethod("create", Object[].class);
-                createMethod.setAccessible(true);
-                return (Request) createMethod.invoke(requestFactory, new Object[]{args});
-            } catch (Exception exc) {
-                return null;
+                    Field requestFactoryField = call.getClass().getDeclaredField("requestFactory");
+                    requestFactoryField.setAccessible(true);
+                    Object requestFactory = requestFactoryField.get(call);
+                    Method createMethod = requestFactory.getClass().getDeclaredMethod("create", Object[].class);
+                    createMethod.setAccessible(true);
+                    request = (Request) createMethod.invoke(requestFactory, new Object[]{args});
+                } catch (Exception exc) {
+                    return null;
+                }
             }
+            return request;
         }
 
         @Override
@@ -175,7 +184,22 @@ public class RxCacheCallAdapterFactory extends CallAdapter.Factory {
                     .flatMap(new Func1<Response<RESULT>, Observable<RxCacheResult<RESULT>>>() {
                         @Override
                         public Observable<RxCacheResult<RESULT>> call(Response<RESULT> response) {
-                            if (response.isSuccess()) {
+                            boolean success = false;
+                            try {
+                                success = response.isSuccessful();
+                            }catch (NoSuchMethodError e2) {
+                                try {
+                                    Method isSuccess = response.getClass().getDeclaredMethod("isSuccess");
+                                    success = (boolean) isSuccess.invoke(response);
+                                } catch (NoSuchMethodException e) {
+                                    e.printStackTrace();
+                                } catch (InvocationTargetException e) {
+                                    e.printStackTrace();
+                                } catch (IllegalAccessException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            if (success) {
                                 return Observable.just(new RxCacheResult<RESULT>(false, response.body()));
                             }
                             return Observable.error(new RxCacheHttpException(response));

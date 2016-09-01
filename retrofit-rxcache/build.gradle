@@ -22,7 +22,7 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.jakewharton:disklrucache:2.0.2'
-    provided 'com.squareup.retrofit2:retrofit:2.0.0-beta4'
+    provided 'com.squareup.retrofit2:retrofit:2.1.0'
     provided 'io.reactivex:rxandroid:1.0.1'
 }
 
@@ -30,7 +30,7 @@ dependencies {
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 // library版本
-version = "1.0.0"
+version = "1.0.2"
 
 def siteUrl = 'https://github.com/cpoopc/RetrofitRxCache'      // 项目的主页
 def gitUrl = 'https://github.com/cpoopc/RetrofitRxCache.git'   // Git仓库的url
